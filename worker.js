@@ -60,9 +60,10 @@ export default {
       });
     }
 
-    // 3. Rate Limit
+    // 3. Autenticação e Rate Limit
     const clientIp = request.headers.get('CF-Connecting-IP') || request.headers.get('x-real-ip') || '127.0.0.1';
     const authHeader = request.headers.get('Authorization') || request.headers.get('x-api-key') || '';
+    const hasApiKey = authHeader.length > 5;
     const isCommercial = authHeader.length > 10;
     const maxReqs = isCommercial ? 300 : 60;
     const rl = checkRateLimit(clientIp, maxReqs, 60000);
@@ -71,7 +72,7 @@ export default {
       return new Response(JSON.stringify({
         ok: false,
         valido: false,
-        error: 'Limite de requisições excedido. Limite gratuito: 60 requisições/minuto.',
+        error: 'Limite de requisições excedido. Limite gratuito: 60 requisições/minuto. Utilize sua chave x-api-key para limite estendido.',
         retryAfterSeconds: Math.ceil((rl.resetAt - Date.now()) / 1000)
       }, null, 2), {
         status: 429,
@@ -93,7 +94,10 @@ export default {
         cluster: 'Cloudflare Edge Anycast (diffstore264.workers.dev)',
         version: env.API_VERSION || '1.0.0',
         status: 'online',
+        autenticado: hasApiKey,
         totalNcms: 15042,
+        totalSecoes: 21,
+        totalCapitulos: 96,
         padrao: 'Receita Federal do Brasil / Camex Mercosul',
         latency: 'sub-2ms',
         github: 'https://github.com/clepta2/ncmfiscal-pro',
@@ -118,6 +122,8 @@ export default {
             consulta: '/api/ncm/:codigo',
             busca: '/api/ncm/busca?q=smartphone',
             capitulos: '/api/ncm/capitulos',
+            secoes: '/api/ncm/secoes',
+            tributos: '/api/ncm/tributos?ncm=8517.13.00&valor=1500',
             validacao: '/api/ncm/validar?ncm=8517.13.00',
             lote: '/api/ncm/validar-lote (POST)'
           },
@@ -133,7 +139,25 @@ export default {
       });
     }
 
-    // 6. Listagem de Capítulos Oficiais (/api/ncm/capitulos ou /api/capitulos)
+    // 6. As 21 Seções Oficiais Camex (/api/ncm/secoes ou /api/secoes)
+    if (path === '/api/ncm/secoes' || path === '/api/secoes') {
+      const secoes = NcmFiscalPro.listarSecoes();
+      return new Response(JSON.stringify({
+        ok: true,
+        totalSecoes: secoes.length,
+        secoes,
+        timestamp: new Date().toISOString()
+      }, null, 2), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'public, max-age=86400',
+          ...CORS_HEADERS
+        }
+      });
+    }
+
+    // 7. Listagem de Capítulos Oficiais (/api/ncm/capitulos ou /api/capitulos)
     if (path === '/api/ncm/capitulos' || path === '/api/capitulos') {
       const capitulos = NcmFiscalPro.listarCapitulos();
       return new Response(JSON.stringify({
@@ -151,7 +175,32 @@ export default {
       });
     }
 
-    // 7. Busca Textual e por Prefixo (/api/ncm/busca ou /api/busca)
+    // 8. Cálculo de Tributos da Lei 12.741 / IBPT (/api/ncm/tributos)
+    if (path === '/api/ncm/tributos' || path === '/api/tributos') {
+      let ncm = url.searchParams.get('ncm') || url.searchParams.get('codigo') || '';
+      let valor = parseFloat(url.searchParams.get('valor') || '100');
+
+      if (!ncm && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          ncm = body.ncm || body.codigo || '';
+          if (body.valor !== undefined) valor = parseFloat(body.valor);
+        } catch (_) {}
+      }
+
+      const resTrib = NcmFiscalPro.estimarTributos(ncm, valor);
+      const statusHttp = resTrib.ok ? 200 : 400;
+
+      return new Response(JSON.stringify(resTrib, null, 2), {
+        status: statusHttp,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          ...CORS_HEADERS
+        }
+      });
+    }
+
+    // 9. Busca Textual e por Prefixo (/api/ncm/busca ou /api/busca)
     if (path === '/api/ncm/busca' || path === '/api/busca') {
       const q = url.searchParams.get('q') || url.searchParams.get('query') || url.searchParams.get('termo') || '';
       const limit = url.searchParams.get('limit') || url.searchParams.get('limite') || 20;
@@ -171,7 +220,7 @@ export default {
       });
     }
 
-    // 8. Validação Rápida (/api/ncm/validar ou /api/validar-nfe)
+    // 10. Validação Rápida (/api/ncm/validar ou /api/validar-nfe)
     if (path === '/api/ncm/validar' || path === '/api/validar') {
       const ncm = url.searchParams.get('ncm') || url.searchParams.get('codigo') || url.searchParams.get('q') || '';
       const resVal = NcmFiscalPro.validar(ncm);
@@ -186,7 +235,7 @@ export default {
       });
     }
 
-    // 9. Validação em Lote (/api/ncm/validar-lote ou /api/lote)
+    // 11. Validação em Lote (/api/ncm/validar-lote ou /api/lote)
     if (path === '/api/ncm/validar-lote' || path === '/api/validar-lote' || path === '/api/lote') {
       if (request.method !== 'POST') {
         return new Response(JSON.stringify({ ok: false, error: 'Envie uma requisição POST com corpo JSON contendo {"ncms": [...]}' }), {
@@ -210,7 +259,7 @@ export default {
       }
     }
 
-    // 10. Consulta Direta de Código NCM (/api/ncm/:codigo ou /api/ncm?codigo=...)
+    // 12. Consulta Direta de Código NCM (/api/ncm/:codigo ou /api/ncm?codigo=...)
     if (path.startsWith('/api/ncm/') || path === '/api/ncm') {
       let codigo = '';
       if (path.startsWith('/api/ncm/')) {
@@ -254,7 +303,7 @@ export default {
       });
     }
 
-    // 11. Rota Não Encontrada (404)
+    // 13. Rota Não Encontrada (404)
     return new Response(JSON.stringify({
       ok: false,
       error: 'Endpoint não encontrado.',
@@ -262,6 +311,8 @@ export default {
         'GET /api/ncm/:codigo',
         'GET /api/ncm/busca?q=smartphone',
         'GET /api/ncm/capitulos',
+        'GET /api/ncm/secoes',
+        'GET /api/ncm/tributos?ncm=8517.13.00&valor=1500',
         'GET /api/ncm/validar?ncm=8517.13.00',
         'POST /api/ncm/validar-lote',
         'GET /health'
@@ -325,10 +376,10 @@ function getHtmlDemo() {
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    p.lead { font-size: 18px; color: var(--muted); max-width: 720px; margin-bottom: 36px; }
+    p.lead { font-size: 18px; color: var(--muted); max-width: 760px; margin-bottom: 36px; }
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 16px;
       margin-bottom: 40px;
     }
@@ -398,7 +449,7 @@ function getHtmlDemo() {
       font-family: 'JetBrains Mono', monospace;
       font-size: 13px;
       overflow-x: auto;
-      max-height: 400px;
+      max-height: 440px;
     }
     .endpoints-table {
       width: 100%;
@@ -421,24 +472,24 @@ function getHtmlDemo() {
   <div class="container">
     <div class="badge">⚡ Cloudflare Edge Anycast &bull; Sub-2ms</div>
     <h1>NCM Fiscal Pro API &amp; SDK</h1>
-    <p class="lead">Microsserviço de alta velocidade para consulta, árvore hierárquica e validação de 15.042 códigos NCM (Nomenclatura Comum do Mercosul - Receita Federal &amp; Camex). Proteção ativa contra Rejeição 778 da SEFAZ.</p>
+    <p class="lead">Microsserviço de alta velocidade para consulta, árvore hierárquica, alíquotas estimadas (IBPT / Lei 12.741), sugestão de CEST e validação de 15.042 códigos NCM (Camex / Receita Federal). Proteção ativa contra a Rejeição 778 da SEFAZ.</p>
 
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-val">15.042</div>
-        <div class="stat-lbl">NCMs Oficiais Cadastrados</div>
+        <div class="stat-lbl">NCMs Oficiais</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">21</div>
+        <div class="stat-lbl">Seções Camex</div>
       </div>
       <div class="stat-card">
         <div class="stat-val">96</div>
-        <div class="stat-lbl">Capítulos do Mercosul</div>
+        <div class="stat-lbl">Capítulos Mercosul</div>
       </div>
       <div class="stat-card">
         <div class="stat-val">&lt; 2ms</div>
-        <div class="stat-lbl">Latência Média na Borda</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val">100%</div>
-        <div class="stat-lbl">Autonomia &bull; Zero Dependência Externa</div>
+        <div class="stat-lbl">Latência na Borda</div>
       </div>
     </div>
 
@@ -449,10 +500,10 @@ function getHtmlDemo() {
         <button onclick="executarTeste()">Consultar / Buscar</button>
       </div>
       <div class="pills">
-        <span class="pill" onclick="testarExemplo('8517.13.00')">📱 8517.13.00 (Smartphones)</span>
-        <span class="pill" onclick="testarExemplo('8471.30.12')">💻 8471.30.12 (Notebooks)</span>
-        <span class="pill" onclick="testarExemplo('2202.91.00')">🍺 2202.91.00 (Cerveja s/ Álcool)</span>
-        <span class="pill" onclick="testarExemplo('3002.41.80')">💉 3002.41.80 (Vacinas Medicina)</span>
+        <span class="pill" onclick="testarExemplo('8517.13.00')">📱 8517.13.00 (Smartphones + CEST 21.053.00)</span>
+        <span class="pill" onclick="testarExemplo('8471.30.12')">💻 8471.30.12 (Notebooks + CEST 21.001.00)</span>
+        <span class="pill" onclick="testarExemplo('2203.00.00')">🍺 2203.00.00 (Cervejas + CEST 03.001.00)</span>
+        <span class="pill" onclick="testarExemplo('3004.90.99')">💊 3004.90.99 (Medicamentos)</span>
         <span class="pill" onclick="testarExemplo('8517')">⚠️ 8517 (Posição 4 dígitos - Alerta SEFAZ)</span>
         <span class="pill" onclick="testarBusca('notebook')">🔍 Buscar "notebook"</span>
       </div>
@@ -460,7 +511,7 @@ function getHtmlDemo() {
     </div>
 
     <div class="tester">
-      <h3 style="margin-bottom:16px;">📚 Endpoints da API</h3>
+      <h3 style="margin-bottom:16px;">📚 Endpoints da API (Cloudflare Anycast)</h3>
       <table class="endpoints-table">
         <thead>
           <tr>
@@ -473,12 +524,22 @@ function getHtmlDemo() {
           <tr>
             <td><span class="method-get">GET</span></td>
             <td><code>/api/ncm/:codigo</code></td>
-            <td>Detalhes completos, árvore genealógica e aptidão para NF-e/NFC-e.</td>
+            <td>Detalhes completos, Seção Camex, alíquotas IBPT, CEST sugerido e aptidão NF-e.</td>
           </tr>
           <tr>
             <td><span class="method-get">GET</span></td>
             <td><code>/api/ncm/busca?q=smartphone</code></td>
             <td>Busca textual e por prefixo com ranqueamento inteligente.</td>
+          </tr>
+          <tr>
+            <td><span class="method-get">GET</span></td>
+            <td><code>/api/ncm/tributos?ncm=...&valor=100</code></td>
+            <td>Cálculo aproximado de tributos para cupom fiscal / NFC-e (Lei 12.741).</td>
+          </tr>
+          <tr>
+            <td><span class="method-get">GET</span></td>
+            <td><code>/api/ncm/secoes</code></td>
+            <td>Lista as 21 Seções Oficiais da Tabela Camex (I a XXI).</td>
           </tr>
           <tr>
             <td><span class="method-get">GET</span></td>
@@ -493,7 +554,7 @@ function getHtmlDemo() {
           <tr>
             <td><span class="method-post">POST</span></td>
             <td><code>/api/ncm/validar-lote</code></td>
-            <td>Auditoria de catálogo em massa (envia array de NCMs).</td>
+            <td>Auditoria de catálogo em massa (envia array de até 200 NCMs).</td>
           </tr>
           <tr>
             <td><span class="method-get">GET</span></td>

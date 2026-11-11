@@ -18,14 +18,17 @@ console.assert(resSmart.hierarquia.capitulo.codigoLimpo === '85', 'Capítulo dev
 console.assert(resSmart.hierarquia.posicao.codigoLimpo === '8517', 'Posição deve ser 8517');
 console.assert(resSmart.hierarquia.subitem.codigoLimpo === '85171300', 'Subitem deve ser 85171300');
 console.assert(resSmart.dicaVarejo.exigeImei === true, 'Smartphones devem alertar sobre exigência de IMEI');
-console.log('✅ 2. Consulta Smartphone OK:', resSmart.codigo, resSmart.descricao, '| IMEI exigido:', resSmart.dicaVarejo.exigeImei);
+console.assert(resSmart.cestSugerido.codigo === '21.053.00', 'CEST sugerido deve ser 21.053.00');
+console.assert(resSmart.secao.numero === 'XVI', 'Seção deve ser XVI (Tecnologia/Eletrônicos)');
+console.log('✅ 2. Consulta Smartphone OK:', resSmart.codigo, '| CEST:', resSmart.cestSugerido.codigo, '| Seção:', resSmart.secao.numero);
 
 // 3. Consulta com código limpo sem pontos
 const resLimpo = NcmFiscalPro.consultar('84713012');
 console.assert(resLimpo.valido === true, 'Consulta sem pontos deve funcionar');
 console.assert(resLimpo.codigo === '8471.30.12', 'Deve devolver código formatado canônico');
 console.assert(resLimpo.dicaVarejo.exigeSerial === true, 'Notebooks exigem número de série');
-console.log('✅ 3. Consulta Notebook (sem pontos) OK:', resLimpo.codigo, resLimpo.descricao);
+console.assert(resLimpo.cestSugerido.codigo === '21.001.00', 'CEST do notebook deve ser 21.001.00');
+console.log('✅ 3. Consulta Notebook (sem pontos) OK:', resLimpo.codigo, '| CEST:', resLimpo.cestSugerido.codigo);
 
 // 4. Consulta de NCM Agrupador não faturável (Posição: 8517 de 4 dígitos)
 const resAgrupador = NcmFiscalPro.consultar('8517');
@@ -77,4 +80,15 @@ const aud = NcmFiscalPro.gerarHashAuditoria('85171300', '200.189.112.45');
 console.assert(aud.hash && aud.hash.startsWith('aud_ncm_85171300_'), 'Hash deve começar com prefixo padrão');
 console.log('✅ 11. Hash de Auditoria LGPD OK:', aud.hash, aud.ipAnonimizado);
 
-console.log('🎉 Todos os 11 testes unitários passaram com sucesso!');
+// 12. As 21 Seções Oficiais Camex
+const secoes = NcmFiscalPro.listarSecoes();
+console.assert(secoes.length === 21, 'Devem existir exatamente 21 seções');
+console.log('✅ 12. As 21 Seções Camex OK: Total =', secoes.length);
+
+// 13. Estimativa de Tributos (Lei 12.741 / IBPT)
+const trib = NcmFiscalPro.estimarTributos('8517.13.00', 1000.00);
+console.assert(trib.ok === true, 'Estimativa deve retornar ok');
+console.assert(trib.tributoTotalEstimado > 0, 'Valor total deve ser maior que 0');
+console.log('✅ 13. Cálculo de Tributos da Lei 12.741 OK:', trib.textoCupomFiscal);
+
+console.log('🎉 Todos os 13 testes unitários passaram com sucesso!');

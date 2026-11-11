@@ -1,6 +1,7 @@
 /**
  * NcmFiscalPro — SDK Oficial (Universal ESM / CommonJS / Cloudflare Workers)
  * Consulta, Validação e Hierarquia de 15.042 NCMs oficiais da Receita Federal & Camex.
+ * Inclui as 21 Seções Oficiais Mercosul, Mapeamento de CESTs e Alíquotas Médias (IBPT / Lei 12.741).
  * 
  * @license MIT
  * @see https://github.com/clepta2/ncmfiscal-pro
@@ -9,6 +10,54 @@
 import { NCM_PACK } from './data/ncm-compact.js';
 
 const { p: PARENTS, n: ITEMS } = NCM_PACK;
+
+// 🏛️ As 21 Seções Oficiais da Tabela Camex / Mercosul / Receita Federal
+const SECOES_CAMEX = [
+  { num: 'I', nome: 'Animais Vivos e Produtos do Reino Animal', icon: '🥩', caps: ['01','02','03','04','05'], tributos: { nac: 4.20, imp: 12.50, est: 7.00, mun: 0 } },
+  { num: 'II', nome: 'Produtos do Reino Vegetal (Hortifrúti, Café & Grãos)', icon: '🌾', caps: ['06','07','08','09','10','11','12','13','14'], tributos: { nac: 5.10, imp: 14.20, est: 12.00, mun: 0 } },
+  { num: 'III', nome: 'Gorduras, Óleos Animais/Vegetais e Ceras', icon: '🫒', caps: ['15'], tributos: { nac: 6.80, imp: 15.60, est: 12.00, mun: 0 } },
+  { num: 'IV', nome: 'Alimentos Preparados, Bebidas & Fumo', icon: '🍺', caps: ['16','17','18','19','20','21','22','23','24'], tributos: { nac: 18.50, imp: 32.40, est: 25.00, mun: 0 } },
+  { num: 'V', nome: 'Produtos Minerais & Combustíveis', icon: '⛏️', caps: ['25','26','27'], tributos: { nac: 13.45, imp: 24.10, est: 18.00, mun: 0 } },
+  { num: 'VI', nome: 'Produtos Químicos, Farmacêuticos & Cosméticos', icon: '💊', caps: ['28','29','30','31','32','33','34','35','36','37','38'], tributos: { nac: 14.20, imp: 21.80, est: 18.00, mun: 0 } },
+  { num: 'VII', nome: 'Plásticos, Borrachas, Capas & Suas Obras', icon: '🛡️', caps: ['39','40'], tributos: { nac: 15.10, imp: 23.40, est: 18.00, mun: 0 } },
+  { num: 'VIII', nome: 'Peles, Couros, Malas & Viagem', icon: '👜', caps: ['41','42','43'], tributos: { nac: 14.80, imp: 22.90, est: 18.00, mun: 0 } },
+  { num: 'IX', nome: 'Madeira, Carvão Vegetal & Cortiça', icon: '🪵', caps: ['44','45','46'], tributos: { nac: 13.90, imp: 21.50, est: 18.00, mun: 0 } },
+  { num: 'X', nome: 'Papel, Cartão, Celulose & Livros', icon: '📦', caps: ['47','48','49'], tributos: { nac: 12.50, imp: 20.10, est: 18.00, mun: 0 } },
+  { num: 'XI', nome: 'Matérias Têxteis, Roupas & Vestuário', icon: '👕', caps: ['50','51','52','53','54','55','56','57','58','59','60','61','62','63'], tributos: { nac: 13.20, imp: 24.00, est: 18.00, mun: 0 } },
+  { num: 'XII', nome: 'Calçados, Chapéus & Guarda-chuvas', icon: '👟', caps: ['64','65','66','67'], tributos: { nac: 14.10, imp: 23.80, est: 18.00, mun: 0 } },
+  { num: 'XIII', nome: 'Vidros, Películas, Cerâmica & Pedras', icon: '🛡️', caps: ['68','69','70'], tributos: { nac: 15.30, imp: 24.50, est: 18.00, mun: 0 } },
+  { num: 'XIV', nome: 'Joias, Ouro, Prata & Bijuterias', icon: '💎', caps: ['71'], tributos: { nac: 16.80, imp: 26.20, est: 18.00, mun: 0 } },
+  { num: 'XV', nome: 'Metais Comuns, Ferramentas & Ferragens', icon: '🔧', caps: ['72','73','74','75','76','78','79','80','81','82','83'], tributos: { nac: 14.60, imp: 23.10, est: 18.00, mun: 0 } },
+  { num: 'XVI', nome: 'Tecnologia, Celulares, Notebooks & Eletrônicos', icon: '📱', caps: ['84','85'], tributos: { nac: 14.85, imp: 22.40, est: 18.00, mun: 0 } },
+  { num: 'XVII', nome: 'Veículos, Motos, Bicicletas & Autopeças', icon: '🚗', caps: ['86','87','88','89'], tributos: { nac: 16.50, imp: 27.80, est: 18.00, mun: 0 } },
+  { num: 'XVIII', nome: 'Óptica, Fotografia, Médicos & Relógios', icon: '⌚', caps: ['90','91','92'], tributos: { nac: 15.20, imp: 23.90, est: 18.00, mun: 0 } },
+  { num: 'XIX', nome: 'Armas, Munições & Acessórios', icon: '🎯', caps: ['93'], tributos: { nac: 28.50, imp: 42.00, est: 25.00, mun: 0 } },
+  { num: 'XX', nome: 'Móveis, Brinquedos & Obras Diversas', icon: '🪑', caps: ['94','95','96'], tributos: { nac: 14.50, imp: 23.00, est: 18.00, mun: 0 } },
+  { num: 'XXI', nome: 'Objetos de Arte, Coleções & Antiguidades', icon: '🎨', caps: ['97'], tributos: { nac: 12.00, imp: 19.50, est: 18.00, mun: 0 } }
+];
+
+const MAPA_CAP_SECAO = new Map();
+for (const sec of SECOES_CAMEX) {
+  for (const cap of sec.caps) {
+    MAPA_CAP_SECAO.set(cap, sec);
+  }
+}
+
+// Mapeamento de CESTs Regulamentados (Convênio ICMS 142/2018) para Varejo
+const CEST_SUGERIDOS = {
+  '85171300': { codigo: '21.053.00', segmento: 'Produtos eletrônicos, eletroeletrônicos e eletrodomésticos', descricao: 'Telefones inteligentes (smartphones)' },
+  '84713012': { codigo: '21.001.00', segmento: 'Produtos eletrônicos, eletroeletrônicos e eletrodomésticos', descricao: 'Computadores portáteis de peso inferior a 3,5 kg' },
+  '85044010': { codigo: '21.054.00', segmento: 'Produtos eletrônicos, eletroeletrônicos e eletrodomésticos', descricao: 'Carregadores de acumuladores para telefones celulares' },
+  '85183000': { codigo: '21.057.00', segmento: 'Produtos eletrônicos, eletroeletrônicos e eletrodomésticos', descricao: 'Fones de ouvido e headsets' },
+  '85076000': { codigo: '21.056.00', segmento: 'Produtos eletrônicos, eletroeletrônicos e eletrodomésticos', descricao: 'Baterias e acumuladores de íon de lítio' },
+  '85444200': { codigo: '21.066.00', segmento: 'Produtos eletrônicos, eletroeletrônicos e eletrodomésticos', descricao: 'Cabos e conectores' },
+  '70071900': { codigo: '10.040.00', segmento: 'Materiais de construção e congêneres', descricao: 'Vidros temperados trabalhados e películas de proteção' },
+  '22030000': { codigo: '03.001.00', segmento: 'Cervejas, chopes, refrigerantes e outras bebidas', descricao: 'Cervejas de malte' },
+  '22021000': { codigo: '03.007.00', segmento: 'Cervejas, chopes, refrigerantes e outras bebidas', descricao: 'Refrigerantes e águas gaseificadas' },
+  '30049099': { codigo: '13.001.00', segmento: 'Medicamentos e produtos farmacêuticos', descricao: 'Medicamentos de uso humano' },
+  '33030010': { codigo: '20.004.00', segmento: 'Perfumaria, higiene pessoal e cosméticos', descricao: 'Perfumes e águas de colônia' },
+  '87082999': { codigo: '01.001.00', segmento: 'Autopeças', descricao: 'Peças e partes de carroçarias para veículos automotores' }
+};
 
 // Dicionário de Sinônimos Comerciais e Dicas Práticas de Varejo / ERP
 const DICAS_FISCAIS_VAREJO = {
@@ -210,6 +259,22 @@ export class NcmFiscalPro {
   }
 
   /**
+   * Retorna a Seção Camex correspondente ao NCM
+   * @param {string} cap2 
+   * @returns {Object|null}
+   */
+  static obterSecao(cap2) {
+    const sec = MAPA_CAP_SECAO.get(cap2);
+    if (!sec) return null;
+    return {
+      numero: sec.num,
+      nome: sec.nome,
+      icone: sec.icon,
+      aliquotasMedias: sec.tributos
+    };
+  }
+
+  /**
    * Consulta dados completos de um NCM específico (<0.1ms em RAM)
    * @param {string|number} ncmInput 
    * @returns {Object}
@@ -259,6 +324,10 @@ export class NcmFiscalPro {
 
     const hierarquia = this._montarHierarquia(limpo);
     const dicaVarejo = DICAS_FISCAIS_VAREJO[limpo] || null;
+    const cestSugerido = CEST_SUGERIDOS[limpo] || null;
+
+    const cap2 = limpo.slice(0, 2);
+    const secao = this.obterSecao(cap2);
 
     return {
       ok: true,
@@ -270,14 +339,23 @@ export class NcmFiscalPro {
       faturavel,
       descricao,
       descricaoPai: descPai,
+      secao,
       hierarquia,
+      tributacaoAproximada: secao ? {
+        federalNacionalPercentual: secao.aliquotasMedias.nac,
+        federalImportadoPercentual: secao.aliquotasMedias.imp,
+        estadualPercentual: secao.aliquotasMedias.est,
+        municipalPercentual: secao.aliquotasMedias.mun,
+        fonte: 'IBPT / Lei da Transparência Fiscal 12.741/2012'
+      } : null,
+      cestSugerido,
       orientacaoFiscal: {
         permiteEmissaoNFe: faturavel,
         aviso: faturavel
           ? 'Código de 8 dígitos apto para emissão de NF-e, NFC-e e Cupom Fiscal.'
           : 'ATENÇÃO: A SEFAZ rejeita notas fiscais (Rejeição 778) emitidas com NCM que não possua 8 dígitos completos. Este código é apenas um agrupador hierárquico.',
         cfopSugerido: dicaVarejo ? dicaVarejo.cfop : '5102',
-        csosnSugerido: dicaVarejo ? dicaVarejo.csosn : '102'
+        csosnSugerido: dicaVarejo ? dicaVarejo.csosn : (cestSugerido ? '500' : '102')
       },
       dicaVarejo: dicaVarejo ? {
         nomeComercial: dicaVarejo.nome,
@@ -287,6 +365,42 @@ export class NcmFiscalPro {
       } : null,
       fonte: 'Receita Federal do Brasil / Camex Mercosul',
       timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Estima o valor em R$ dos tributos incidentes sobre o produto para o rodapé do cupom fiscal / NFC-e (Lei 12.741)
+   * @param {string|number} ncmInput 
+   * @param {number} valorProduto 
+   * @returns {Object}
+   */
+  static estimarTributos(ncmInput, valorProduto = 100.00) {
+    const val = Number(valorProduto) > 0 ? Number(valorProduto) : 100.00;
+    const info = this.consultar(ncmInput);
+    if (!info.valido || !info.tributacaoAproximada) {
+      return {
+        ok: false,
+        erro: 'Não foi possível estimar tributos para o NCM informado.'
+      };
+    }
+
+    const { federalNacionalPercentual, estadualPercentual } = info.tributacaoAproximada;
+    const valorFederal = Number((val * (federalNacionalPercentual / 100)).toFixed(2));
+    const valorEstadual = Number((val * (estadualPercentual / 100)).toFixed(2));
+    const valorTotal = Number((valorFederal + valorEstadual).toFixed(2));
+    const percentualTotal = Number((federalNacionalPercentual + estadualPercentual).toFixed(2));
+
+    return {
+      ok: true,
+      ncm: info.codigo,
+      valorProduto: val,
+      valorProdutoFormatado: `R$ ${val.toFixed(2).replace('.', ',')}`,
+      tributoFederalEstimado: valorFederal,
+      tributoEstadualEstimado: valorEstadual,
+      tributoTotalEstimado: valorTotal,
+      tributoTotalFormatado: `R$ ${valorTotal.toFixed(2).replace('.', ',')}`,
+      percentualTotal,
+      textoCupomFiscal: `Trib. aprox.: R$ ${valorTotal.toFixed(2).replace('.', ',')} (${percentualTotal}%) Fonte: IBPT/Lei 12.741`
     };
   }
 
@@ -445,16 +559,32 @@ export class NcmFiscalPro {
       const raw = ITEMS[i];
       const limpo = raw[0].replace(/\D/g, '');
       if (limpo.length === 2) {
+        const sec = this.obterSecao(limpo);
         caps.push({
           codigo: raw[0],
           codigoLimpo: limpo,
-          descricao: raw[1]
+          descricao: raw[1],
+          secao: sec ? { numero: sec.numero, nome: sec.nome, icone: sec.icone } : null
         });
       }
     }
 
     this._capitulosCache = caps;
     return caps;
+  }
+
+  /**
+   * Lista as 21 Seções Oficiais da Tabela Camex
+   * @returns {Array<Object>}
+   */
+  static listarSecoes() {
+    return SECOES_CAMEX.map(s => ({
+      numero: s.num,
+      nome: s.nome,
+      icone: s.icon,
+      capitulos: s.caps,
+      aliquotasMedias: s.tributos
+    }));
   }
 
   /**

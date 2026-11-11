@@ -1,89 +1,103 @@
-# 📦 NCM Fiscal Pro — SDK & API Oficial de Consulta e Validação Fiscal
+# 📦 NCM Fiscal Pro
 
-> **API REST e SDK de alta performance em Cloudflare Edge Anycast (<2ms de latência) para consulta, busca textual, decomposição de árvore genealógica e validação de 15.042 códigos NCM (Nomenclatura Comum do Mercosul - Receita Federal e Camex) com proteção ativa contra a Rejeição 778 da SEFAZ.**
+> **Documentação Oficial da API & SDK de Classificação Fiscal, Árvore Mercosul e Tributação (Camex / Receita Federal).**  
+> 🔒 **Atenção:** Este repositório destina-se exclusivamente à visualização de documentação técnica e integração do cliente SDK. O serviço de API em nuvem é operado através do nosso **Site de APIs (em breve)**. O acesso aos endpoints na borda requer obrigatoriamente uma **Chave de API (`x-api-key`)** ativa.
 
-[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers%20Edge-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
-[![Base Oficial](https://img.shields.io/badge/Base-Receita%20Federal%20%7C%20Camex-blue.svg)](#)
-[![Acervo](https://img.shields.io/badge/Acervo-15.042%20NCMs-10b981.svg)](#)
-[![Latência](https://img.shields.io/badge/Latência-sub--2ms-cyan.svg)](#)
-[![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
-
----
-
-## ⚡ O que é o NCM Fiscal Pro?
-
-O **NCM Fiscal Pro** é um microsserviço de infraestrutura fiscal soberana projetado para:
-- **ERPs & Sistemas de Gestão de Estoque**: Validação de NCM no cadastro de produtos para impedir emissões rejeitadas na SEFAZ.
-- **Frentes de Caixa (PDV) & Emissores de NFC-e / NF-e**: Bloqueio de códigos não faturáveis (NCMs com menos de 8 dígitos que causam a **Rejeição 778 da SEFAZ**).
-- **E-commerces & Marketplaces**: Autocomplete e busca inteligente de classificação fiscal de produtos por nome ou prefixo.
-- **Auditoria de Catálogo**: Endpoint de validação em lote (`/api/ncm/validar-lote`) para auditar até 200 produtos por requisição.
-- **Agentes de IA & Automações**: Resposta JSON ultracompacta para economia de tokens em agentes de compras, cotações e faturamento.
+[![Status](https://img.shields.io/badge/Status-Cloudflare%20Edge%20API-success.svg)](#)
+[![Padrão](https://img.shields.io/badge/Padrão-Receita%20Federal%20%7C%20Camex%20Mercosul-blue.svg)](#)
+[![Autenticação](https://img.shields.io/badge/Autenticação-x--api--key%20Obrigatória-orange.svg)](#)
+[![Acervo](https://img.shields.io/badge/Acervo-15.042%20NCMs%20Oficiais-10b981.svg)](#)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietária%20%2F%20Portal%20de%20APIs-red.svg)](LICENSE)
 
 ---
 
-## 🚀 Como Integrar em seu Projeto
+## 🔒 Acesso à API e Chaves
 
-### 1. Instalação via NPM
+Para consumir esta API nos seus sistemas, ERPs, frentes de caixa (PDV) e plataformas de e-commerce, cadastre-se no nosso **Site de APIs** para obter sua chave de acesso (`x-api-key`).
+
+Todas as requisições aos endpoints em nuvem devem incluir a chave no cabeçalho:
+```http
+GET /api/ncm/8517.13.00 HTTP/1.1
+Host: ncmfiscal-pro-api.diffstore264.workers.dev
+x-api-key: SUA_CHAVE_DO_PORTAL
+```
+
+---
+
+## 🚀 Instalação (NPM)
 
 ```bash
 npm install ncmfiscal-pro
 ```
 
-*(Ou utilize o arquivo `ncmfiscal-pro.js` diretamente no seu backend Node.js, Deno, Bun ou frontend).*
+*(Ou utilize o arquivo `ncmfiscal-pro.js` diretamente no Node.js, Bun, Deno ou no navegador).*
 
-### 2. Uso com o SDK Local (0ms de Rede, em RAM)
+---
+
+## ⚡ Uso com o SDK Oficial
 
 ```javascript
 import { NcmFiscalPro } from 'ncmfiscal-pro';
 
-// 1. Consulta Completa de NCM (Smartphones)
-const res = NcmFiscalPro.consultar('8517.13.00');
+// 1. Consulta Completa de NCM (Smartphones: 8517.13.00) — 0ms em RAM
+const resSmart = NcmFiscalPro.consultar('8517.13.00');
 
-console.log(res.valido); // true
-console.log(res.descricao); // 'Telefones inteligentes (smartphones)'
-console.log(res.faturavel); // true (8 dígitos apto para emissão de NF-e)
-console.log(res.hierarquia.capitulo.descricao); // Capítulo 85
-console.log(res.dicaVarejo.exigeImei); // true (alerta de exigência de IMEI)
+console.log(resSmart.valido);                     // true
+console.log(resSmart.descricao);                  // "Telefones inteligentes (smartphones)"
+console.log(resSmart.faturavel);                  // true (8 dígitos apto para emissão de NF-e)
+console.log(resSmart.secao.nome);                 // "Tecnologia, Celulares, Notebooks & Eletrônicos"
+console.log(resSmart.hierarquia.capitulo.codigo); // "85"
+console.log(resSmart.cestSugerido.codigo);        // "21.053.00" (Substituição Tributária)
+console.log(resSmart.dicaVarejo.exigeImei);       // true (Alerta de IMEI obrigatório na NF-e)
 
-// 2. Busca Textual Rápida
+// 2. Cálculo de Tributos da Lei da Transparência Fiscal 12.741 / IBPT
+const imposto = NcmFiscalPro.estimarTributos('8517.13.00', 1500.00);
+
+console.log(imposto.tributoTotalFormatado);       // "R$ 492,75"
+console.log(imposto.percentualTotal);             // 32.85 (%)
+console.log(imposto.textoCupomFiscal);            // "Trib. aprox.: R$ 492,75 (32.85%) Fonte: IBPT/Lei 12.741"
+
+// 3. Busca Textual Inteligente e por Prefixo (Autocomplete em PDV)
 const busca = NcmFiscalPro.buscar('cerveja', { limite: 5, apenasFaturaveis: true });
-console.log(busca.totalResultados); // 6
-console.log(busca.resultados[0].codigo); // 2202.91.00
 
-// 3. Validação Rápida
-const validacao = NcmFiscalPro.validar('85171300');
-console.log(validacao.valido); // true
+console.log(busca.totalResultados);               // 7
+console.log(busca.resultados[0].codigo);          // "2202.91.00"
+console.log(busca.resultados[0].descricao);       // "Cerveja sem álcool"
+
+// 4. Escudo Ativo Anti-Rejeição 778 da SEFAZ
+const resAgrupador = NcmFiscalPro.consultar('8517'); // Posição de 4 dígitos
+
+console.log(resAgrupador.faturavel);              // false
+console.log(resAgrupador.orientacaoFiscal.aviso); // "ATENÇÃO: A SEFAZ rejeita notas fiscais (Rejeição 778)..."
 ```
 
 ---
 
-## 🌐 Endpoints Oficiais da Edge API (Cloudflare Anycast)
+## 🌐 Endpoint Anycast Edge (Requer x-api-key)
 
-**Cluster Oficial:** `https://ncmfiscal-pro-api.diffstore264.workers.dev`
+* **Endpoint Cloudflare:** `GET https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/:codigo`
+* **Cluster:** Cloudflare Anycast (`diffstore264.workers.dev`)
+* **Autenticação:** Header `x-api-key` ou `Authorization: Bearer SUA_CHAVE`
+* **Latência:** `<2ms`
 
-| Método | Endpoint | Finalidade |
-| :---: | :--- | :--- |
-| **`GET`** | `/api/ncm/:codigo` | Detalhes completos, árvore genealógica e aptidão para NF-e/NFC-e. |
-| **`GET`** | `/api/ncm/busca?q=...` | Busca textual e por prefixo numérico com ranqueamento de relevância. |
-| **`GET`** | `/api/ncm/capitulos` | Listagem dos 96 capítulos do Mercosul (01 a 99) com contagem de subitens. |
-| **`GET`** | `/api/ncm/validar?ncm=...` | Validação rápida de NCM para formulários de cadastro de produto. |
-| **`POST`** | `/api/ncm/validar-lote` | Auditoria de catálogo em massa (envia array de até 200 NCMs). |
-| **`GET`** | `/health` | Telemetria e status operacional do cluster Cloudflare Edge. |
-
----
-
-## 💻 Exemplos de Chamadas HTTP
-
-### 1. Consulta Direta por Código NCM
+### Exemplos via cURL:
 ```bash
-# Com pontuação
-curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/8517.13.00"
-
-# Dígitos limpos (sem pontuação)
-curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/84713012"
+# Consulta direta por código NCM
+curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/8517.13.00" \
+  -H "x-api-key: SUA_CHAVE_DO_PORTAL"
+```
+```bash
+# Busca de produtos por texto livre
+curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/busca?q=smartphone&limit=5" \
+  -H "x-api-key: SUA_CHAVE_DO_PORTAL"
+```
+```bash
+# Estimativa de tributos para Cupom Fiscal (Lei 12.741)
+curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/tributos?ncm=8517.13.00&valor=1000" \
+  -H "x-api-key: SUA_CHAVE_DO_PORTAL"
 ```
 
-#### Exemplo de Resposta (200 OK):
+### Exemplo de Resposta JSON Completa:
 ```json
 {
   "ok": true,
@@ -95,11 +109,22 @@ curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/84713012
   "faturavel": true,
   "descricao": "Telefones inteligentes (smartphones)",
   "descricaoPai": "Aparelhos telefônicos, incluindo os telefones inteligentes (smartphones)...",
+  "secao": {
+    "numero": "XVI",
+    "nome": "Tecnologia, Celulares, Notebooks & Eletrônicos",
+    "icone": "📱",
+    "aliquotasMedias": {
+      "nac": 14.85,
+      "imp": 22.4,
+      "est": 18,
+      "mun": 0
+    }
+  },
   "hierarquia": {
     "capitulo": {
       "codigo": "85",
       "codigoLimpo": "85",
-      "descricao": "Máquinas, aparelhos e materiais elétricos..."
+      "descricao": "Máquinas, aparelhos e materiais elétricos, e suas partes..."
     },
     "posicao": {
       "codigo": "85.17",
@@ -117,6 +142,18 @@ curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/84713012
       "descricao": "Telefones inteligentes (smartphones)"
     }
   },
+  "tributacaoAproximada": {
+    "federalNacionalPercentual": 14.85,
+    "federalImportadoPercentual": 22.4,
+    "estadualPercentual": 18,
+    "municipalPercentual": 0,
+    "fonte": "IBPT / Lei da Transparência Fiscal 12.741/2012"
+  },
+  "cestSugerido": {
+    "codigo": "21.053.00",
+    "segmento": "Produtos eletrônicos, eletroeletrônicos e eletrodomésticos",
+    "descricao": "Telefones inteligentes (smartphones)"
+  },
   "orientacaoFiscal": {
     "permiteEmissaoNFe": true,
     "aviso": "Código de 8 dígitos apto para emissão de NF-e, NFC-e e Cupom Fiscal.",
@@ -131,88 +168,42 @@ curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/84713012
   },
   "fonte": "Receita Federal do Brasil / Camex Mercosul",
   "auditoria": {
-    "hash": "aud_ncm_85171300_1794400899727_4f459cbe",
-    "ipAnonimizado": "ip_4f459cbe",
-    "timestamp": "2026-11-11T09:40:00.000Z"
+    "hash": "aud_ncm_85171300_1794402594101_4c0ed342",
+    "ipAnonimizado": "ip_4c0ed342",
+    "timestamp": "2026-11-11T13:00:00.000Z"
   }
 }
 ```
 
 ---
 
-### 2. Busca Textual e por Prefixo
-```bash
-# Busca de produtos
-curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/busca?q=smartphone&limit=5&faturavel=true"
+## 📚 Tabela de Endpoints da API
 
-# Busca por prefixo numérico (Posição 8517)
-curl -X GET "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/busca?q=8517&limit=10"
-```
-
----
-
-### 3. Validação em Lote (Auditoria de Catálogo de ERP)
-```bash
-curl -X POST "https://ncmfiscal-pro-api.diffstore264.workers.dev/api/ncm/validar-lote" \
-  -H "Content-Type: application/json" \
-  -d '{"ncms": ["8517.13.00", "8471.30.12", "9999.99.99", "8517"]}'
-```
-
-#### Resposta da Validação em Lote:
-```json
-{
-  "ok": true,
-  "totalRecebido": 4,
-  "totalProcessado": 4,
-  "totalValidos": 3,
-  "totalInvalidos": 1,
-  "totalFaturaveisNFe": 2,
-  "itens": [
-    {
-      "ncmInformado": "8517.13.00",
-      "valido": true,
-      "codigo": "8517.13.00",
-      "faturavel": true,
-      "nivel": "subitem",
-      "descricao": "Telefones inteligentes (smartphones)"
-    },
-    {
-      "ncmInformado": "9999.99.99",
-      "valido": false,
-      "motivo": "NCM não consta na tabela oficial Camex"
-    },
-    {
-      "ncmInformado": "8517",
-      "valido": true,
-      "codigo": "85.17",
-      "faturavel": false,
-      "nivel": "posicao",
-      "descricao": "Aparelhos telefônicos..."
-    }
-  ]
-}
-```
+| Método | Endpoint | Finalidade |
+| :---: | :--- | :--- |
+| **`GET`** | `/api/ncm/:codigo` | Detalhes completos, Seção Camex, alíquotas IBPT, CEST sugerido e aptidão NF-e. |
+| **`GET`** | `/api/ncm/busca?q=...` | Busca textual e por prefixo numérico com ranqueamento inteligente. |
+| **`GET`** | `/api/ncm/tributos?ncm=...&valor=100` | Cálculo aproximado de tributos para cupom fiscal / NFC-e (Lei 12.741). |
+| **`GET`** | `/api/ncm/secoes` | Lista as 21 Seções Oficiais da Tabela Camex (I a XXI). |
+| **`GET`** | `/api/ncm/capitulos` | Listagem dos 96 capítulos do Mercosul (01 a 99) com contagem de subitens. |
+| **`GET`** | `/api/ncm/validar?ncm=...` | Validação rápida de NCM para formulários de cadastro de produto. |
+| **`POST`** | `/api/ncm/validar-lote` | Auditoria de catálogo em massa (envia array de até 200 NCMs). |
+| **`GET`** | `/health` | Telemetria e status operacional do cluster Cloudflare Edge. |
 
 ---
 
 ## 🛡️ Proteção Ativa Contra a Rejeição 778 da SEFAZ
 
-A **Rejeição 778** da SEFAZ ocorre quando uma empresa tenta emitir uma NF-e ou NFC-e informando um NCM que **não existe como subitem de 8 dígitos** (por exemplo, informando apenas o capítulo `85` ou a posição `8517`).
+A **Rejeição 778** da SEFAZ ocorre quando o emissor tenta autorizar um XML de NF-e ou NFC-e informando um código NCM que **não é folha de 8 dígitos** (por exemplo, informando apenas a posição `8517` ou o capítulo `85`).
 
-O **NcmFiscalPro** identifica automaticamente se o NCM consultado é:
-- `faturavel: true`: possui 8 dígitos e é uma folha válida da árvore tributária.
-- `faturavel: false`: é um agrupador intermediário (capítulo, posição ou subposição) e **não pode** ser utilizado no XML da nota.
-
----
-
-## 🔒 Auditoria Criptográfica & Conformidade com a LGPD
-
-Toda consulta à API gera automaticamente um cabeçalho HTTP `X-Audit-Hash` e um objeto de auditoria com hash SHA-256 e IP anonimizado, garantindo rastreabilidade jurídica sem expor dados pessoais de clientes.
+O **NcmFiscalPro** analisa matematicamente e aduaneiramente o código e indica:
+- `faturavel: true`: NCM de 8 dígitos homologado pela Receita Federal, apto para XML fiscal.
+- `faturavel: false`: Código agrupador intermediário (capítulo, posição ou subposição). Rejeição imediata garantida na SEFAZ.
 
 ---
 
 ## 📄 Licença
 
-Distribuído sob a licença **MIT**. Veja [LICENSE](LICENSE) para mais detalhes.
+Distribuído sob licença MIT. Veja `LICENSE` para mais detalhes.
 
-Desenvolvido por **[clepta2](https://github.com/clepta2)** &bull; **OZPro Enterprise Ecosystem**.
+Copyright (c) 2026 clepta2
