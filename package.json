@@ -1,0 +1,42 @@
+{
+  "name": "ncmfiscal-pro",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "SDK e API Oficial de Consulta, Validação e Hierarquia de 15.042 NCMs (Nomenclatura Comum do Mercosul - Receita Federal e Camex) na borda Cloudflare Edge (<2ms) com proteção contra Rejeição 778 da SEFAZ.",
+  "main": "ncmfiscal-pro.js",
+  "module": "ncmfiscal-pro.js",
+  "types": "types/index.d.ts",
+  "scripts": {
+    "test": "node test.js",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "ncm",
+    "ncm-fiscal",
+    "fiscal",
+    "tributacao",
+    "sefaz",
+    "receita-federal",
+    "camex",
+    "mercosul",
+    "nfe",
+    "nfce",
+    "rejeicao-778",
+    "cfop",
+    "csosn",
+    "cloudflare-worker",
+    "edge-computing",
+    "brasil",
+    "sdk"
+  ],
+  "author": "clepta2 <clepta2@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clepta2/ncmfiscal-pro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/clepta2/ncmfiscal-pro/issues"
+  },
+  "homepage": "https://github.com/clepta2/ncmfiscal-pro#readme"
+}
