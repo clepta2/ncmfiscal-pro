@@ -1,21 +1,10 @@
-MIT License
+Copyright (c) 2026 clepta2. Todos os direitos reservados.
 
-Copyright (c) 2026 clepta2
+TERMOS DE USO E LICENÇA DO CLIENTE SDK / DOCUMENTAÇÃO:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Este repositório destina-se exclusivamente à consulta de documentação técnica e como cliente SDK para integração ao nosso Portal Oficial de APIs (em breve).
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. O acesso à infraestrutura em nuvem, aos endpoints e aos microsserviços de borda é privado e requer obrigatoriamente uma Chave de API ativa ("x-api-key") emitida pela nossa plataforma de APIs.
+2. Este repositório não é um projeto aberto para modificação, fork comercial não autorizado ou engenharia reversa.
+3. É expressamente vedada a redistribuição comercial, hospedagem espelhada não autorizada ou qualquer tentativa de contornar os sistemas de autenticação, cotas ou cobrança do nosso Site de APIs.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.

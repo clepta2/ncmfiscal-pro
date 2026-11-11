@@ -204,6 +204,7 @@ O **NcmFiscalPro** analisa matematicamente e aduaneiramente o código e indica:
 
 ## 📄 Licença
 
-Distribuído sob licença MIT. Veja `LICENSE` para mais detalhes.
+Distribuído sob os Termos de Uso e Licença Proprietária do Cliente SDK. Veja [LICENSE](LICENSE) para mais detalhes.
 
 Copyright (c) 2026 clepta2
+
