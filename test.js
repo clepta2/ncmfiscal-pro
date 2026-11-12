@@ -91,4 +91,31 @@ console.assert(trib.ok === true, 'Estimativa deve retornar ok');
 console.assert(trib.tributoTotalEstimado > 0, 'Valor total deve ser maior que 0');
 console.log('✅ 13. Cálculo de Tributos da Lei 12.741 OK:', trib.textoCupomFiscal);
 
-console.log('🎉 Todos os 13 testes unitários passaram com sucesso!');
+// 14. Testes de Lote do Worker
+import worker from './worker.js';
+console.log('\n--- 14. Testes do Endpoint de Lote do Worker ---');
+const resLote = await worker.fetch(new Request('https://api.test/api/ncm/validar-lote', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ncms: ['8517.13.00', '8471.30.12', '99999999'] })
+}), {});
+const bodyLote = await resLote.json();
+console.assert(resLote.status === 200, 'Status deve ser 200');
+console.assert(bodyLote.totalProcessado === 3, 'Deve processar 3 itens');
+console.assert(bodyLote.totalValidos === 2, '2 válidos');
+console.assert(bodyLote.totalInvalidos === 1, '1 inválido');
+console.log('✅ Validação em lote do worker processou e reportou resultados por item');
+
+const resExcesso = await worker.fetch(new Request('https://api.test/api/ncm/validar-lote', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ncms: Array(51).fill('85171300') })
+}), {});
+console.assert(resExcesso.status === 413, 'Excesso gratuito deve retornar 413');
+console.log('✅ Excesso de tamanho de lote gratuito rejeitado com 413');
+
+const resMetodo = await worker.fetch(new Request('https://api.test/api/ncm/validar-lote'), {});
+console.assert(resMetodo.status === 405, 'GET deve retornar 405');
+console.log('✅ Método incorreto rejeitado');
+
+console.log('🎉 Todos os testes passaram com sucesso!');
