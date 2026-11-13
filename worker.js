@@ -63,8 +63,17 @@ export default {
     // 3. Autenticação e Rate Limit
     const clientIp = request.headers.get('CF-Connecting-IP') || request.headers.get('x-real-ip') || '127.0.0.1';
     const authHeader = request.headers.get('Authorization') || request.headers.get('x-api-key') || '';
-    const hasApiKey = authHeader.length > 5;
-    const isCommercial = authHeader.length > 10;
+    const cleanKey = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const hasApiKey = Boolean(
+      cleanKey && (
+        cleanKey.startsWith('ncm_live_') || 
+        cleanKey.startsWith('ncm_pro_') || 
+        cleanKey.startsWith('ncm_master_') || 
+        cleanKey.startsWith('pnt_live_') ||
+        (env && (env.API_KEY === cleanKey || env.PRO_KEY === cleanKey))
+      ) && cleanKey.length >= 16
+    );
+    const isCommercial = hasApiKey;
     const maxReqs = isCommercial ? 300 : 60;
     const rl = checkRateLimit(clientIp, maxReqs, 60000);
 
