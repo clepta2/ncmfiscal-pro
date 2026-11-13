@@ -95,6 +95,21 @@ export default {
       });
     }
 
+    // 3.1 Verifica??o de Cache Anycast Nativo Cloudflare (Sub-2ms)
+    const hasEdgeCache = typeof caches !== 'undefined' && caches.default && request.method === 'GET';
+    const cacheKey = hasEdgeCache ? new Request(url.toString(), { method: 'GET' }) : null;
+    if (hasEdgeCache && !path.includes('/health') && !path.includes('/status') && path !== '/' && path !== '/demo') {
+      try {
+        const cached = await caches.default.match(cacheKey);
+        if (cached) {
+          const res = new Response(cached.body, cached);
+          res.headers.set('CF-Cache-Status', 'HIT');
+          res.headers.set('X-Edge-Cache', 'HIT (<2ms Anycast RAM)');
+          return res;
+        }
+      } catch (_) {}
+    }
+
     // 4. Healthcheck e Status
     if (path === '/health' || path === '/status') {
       return new Response(JSON.stringify({
